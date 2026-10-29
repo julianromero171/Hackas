@@ -4,7 +4,7 @@ services:
     container_name: gnosoft_timetable_ai
     restart: unless-stopped
     ports:
-      - "8000:8000"  # FastAPI backend + Frontend SPA
+      - "8008:8000"  # FastAPI backend + Frontend SPA
       - "8501:8501"  # Dashboard Streamlit
     environment:
       - PYTHONUNBUFFERED=1
