@@ -1,0 +1,12 @@
+{
+  "name": "gnosoft-timetable-ai",
+  "version": "1.0.0",
+  "description": "Generación inteligente y optimización de horarios escolares con IA (Reto Gnosoft).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/selftest.mjs",
+    "serve": "python -m http.server 8080"
+  },
+  "license": "MIT"
+}

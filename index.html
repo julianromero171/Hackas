@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GnoSoft Timetable AI · Generación inteligente de horarios escolares</title>
+  <meta name="description" content="Generador inteligente de horarios escolares con IA: copiloto en lenguaje natural, motor híbrido CSP + cadenas de Kempe + Simulated Annealing y Google OR-Tools CP-SAT. 0 cruces garantizados." />
+  <meta name="theme-color" content="#05070f" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2322d3ee'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M18 20h28M18 32h28M18 44h16' stroke='%2305070f' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
+          colors: { ink: { 950: '#05070f', 900: '#0a0e1a', 800: '#111827' } },
+        },
+      },
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js" defer></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body class="bg-ink-950 text-slate-200 font-sans antialiased">
+  <!-- Fondo -->
+  <div class="bg-aurora" aria-hidden="true">
+    <div class="orb" style="background:#6366f1;top:-120px;left:-80px"></div>
+    <div class="orb" style="background:#22d3ee;top:20%;right:-140px;animation-delay:-6s"></div>
+    <div class="orb" style="background:#a78bfa;bottom:-160px;left:35%;animation-delay:-12s"></div>
+  </div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 border-b border-white/5 bg-ink-950/70 backdrop-blur-xl">
+    <div class="max-w-[1720px] mx-auto px-4 lg:px-6 h-16 flex items-center gap-4">
+      <a href="#" class="flex items-center gap-3 shrink-0" aria-label="GnoSoft Timetable AI">
+        <span class="logo-mark">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="#05070f" stroke-width="2.6" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h8" /></svg>
+        </span>
+        <span>
+          <h1 class="text-[15px] font-extrabold tracking-tight text-white leading-tight">GnoSoft <span class="text-gradient">Timetable AI</span></h1>
+          <span class="block text-[11px] text-slate-400">Reto Gnosoft · Optimización de horarios escolares</span>
+        </span>
+      </a>
+
+      <div id="engine-status" class="hidden lg:flex items-center gap-2 ml-4 px-3 h-8 rounded-full bg-white/5 border border-white/10 text-xs text-slate-300"></div>
+
+      <nav class="ml-auto flex items-center gap-2" aria-label="Acciones">
+        <button id="btn-optimize" class="btn btn-primary" type="button" title="Re-optimizar horario completo"><i data-lucide="sparkles"></i><span class="hidden sm:inline">Re-optimizar</span></button>
+        <button id="btn-reset" class="btn" type="button" title="Generar desde cero (libera bloques fijados)"><i data-lucide="rotate-ccw"></i><span class="hidden xl:inline">Desde cero</span></button>
+        <button id="btn-csv" class="btn" type="button" title="Exportar CSV"><i data-lucide="file-spreadsheet"></i><span class="hidden xl:inline">CSV</span></button>
+        <button id="btn-print" class="btn" type="button" title="Imprimir / PDF"><i data-lucide="printer"></i><span class="hidden xl:inline">PDF</span></button>
+        <button id="btn-settings" class="btn" type="button" title="Configuración"><i data-lucide="settings-2"></i></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-[1720px] mx-auto px-4 lg:px-6 py-6 space-y-6">
+    <div id="issues"></div>
+
+    <!-- KPIs -->
+    <section id="kpis" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4" aria-label="Indicadores clave">
+      <article id="kpi-conflicts" class="kpi-card glass" style="--glow: rgba(52,211,153,.18)">
+        <div class="flex items-center justify-between">
+          <span class="kpi-label">Cruces de horario</span>
+          <span class="kpi-icon bg-emerald-500/15 text-emerald-300" data-icon><i data-lucide="shield-check"></i></span>
+        </div>
+        <div class="flex items-end gap-2"><span class="kpi-value" data-value>—</span><span class="mb-1.5 text-[11px] font-semibold" data-badge></span></div>
+        <div class="kpi-sub" data-sub>Calculando…</div>
+      </article>
+
+      <article id="kpi-score" class="kpi-card glass" style="--glow: rgba(129,140,248,.22)">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <span class="kpi-label">Score de calidad IA</span>
+            <div class="flex items-end gap-2"><span class="kpi-value" data-value>—</span><span class="mb-1.5" data-delta></span></div>
+            <div class="kpi-sub" data-sub>Función objetivo ponderada</div>
+          </div>
+          <svg viewBox="0 0 64 64" class="w-16 h-16 -rotate-90 shrink-0" aria-hidden="true">
+            <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#22d3ee" /><stop offset="100%" stop-color="#a78bfa" /></linearGradient></defs>
+            <circle cx="32" cy="32" r="26" fill="none" stroke-width="7" class="ring-track" />
+            <circle id="score-ring" cx="32" cy="32" r="26" fill="none" stroke-width="7" stroke-linecap="round" class="ring-bar" stroke-dasharray="163.36" stroke-dashoffset="163.36" />
+          </svg>
+        </div>
+      </article>
+
+      <article id="kpi-gaps" class="kpi-card glass" style="--glow: rgba(251,191,36,.16)">
+        <div class="flex items-center justify-between">
+          <span class="kpi-label">Horas huecas docentes</span>
+          <span class="kpi-icon bg-amber-500/15 text-amber-300"><i data-lucide="hourglass"></i></span>
+        </div>
+        <div class="flex items-end gap-2"><span class="kpi-value" data-value>—</span><span class="mb-1.5" data-delta></span></div>
+        <div class="kpi-sub" data-sub>—</div>
+      </article>
+
+      <article id="kpi-equity" class="kpi-card glass" style="--glow: rgba(244,114,182,.16)">
+        <div class="flex items-center justify-between">
+          <span class="kpi-label">Índice de equidad pedagógica</span>
+          <span class="kpi-icon bg-pink-500/15 text-pink-300"><i data-lucide="scale"></i></span>
+        </div>
+        <div class="flex items-end gap-2"><span class="kpi-value" data-value>—</span><span class="mb-1.5" data-delta></span></div>
+        <div class="kpi-sub" data-sub>—</div>
+      </article>
+
+      <article id="kpi-labs" class="kpi-card glass col-span-2 md:col-span-1" style="--glow: rgba(34,211,238,.16)">
+        <div class="flex items-center justify-between">
+          <span class="kpi-label">Uso de laboratorios</span>
+          <span class="kpi-icon bg-cyan-500/15 text-cyan-300"><i data-lucide="flask-conical"></i></span>
+        </div>
+        <div class="kpi-value" data-value>—</div>
+        <div class="mt-2 space-y-1.5" data-bars></div>
+      </article>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <!-- Horario -->
+      <section class="xl:col-span-8 glass rounded-2xl p-4 lg:p-5 min-w-0" aria-labelledby="tt-title">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="tt-title" class="text-lg font-bold text-white tracking-tight">Horario semanal</h2>
+            <p id="tt-subtitle" class="text-xs text-slate-400">—</p>
+          </div>
+          <div id="view-tabs" class="seg" role="tablist" aria-label="Vista">
+            <button type="button" role="tab" id="tab-curso" data-view="curso" class="seg-btn is-active"><i data-lucide="users"></i>Por Curso</button>
+            <button type="button" role="tab" id="tab-docente" data-view="docente" class="seg-btn"><i data-lucide="graduation-cap"></i>Por Docente</button>
+            <button type="button" role="tab" id="tab-aula" data-view="aula" class="seg-btn"><i data-lucide="door-open"></i>Por Aula/Lab</button>
+          </div>
+        </div>
+
+        <div id="entity-selector" class="mt-4 flex gap-2 overflow-x-auto pb-1"></div>
+        <div id="detail-panel" class="mt-4"></div>
+        <div id="swap-hint" class="mt-3 flex items-center gap-2 text-xs text-slate-400"></div>
+        <div id="timetable" class="mt-2 overflow-x-auto">
+          <div class="h-[520px] grid place-items-center text-slate-500"><div class="flex items-center gap-3"><span class="spinner"></span>Generando horario óptimo…</div></div>
+        </div>
+        <div id="legend" class="mt-4 flex flex-wrap gap-2"></div>
+      </section>
+
+      <!-- Panel lateral -->
+      <aside class="xl:col-span-4 space-y-6 min-w-0">
+        <!-- Copiloto -->
+        <section class="glass rounded-2xl flex flex-col h-[640px]" aria-labelledby="chat-title">
+          <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5">
+            <span class="bot-avatar w-9 h-9 rounded-xl"><i data-lucide="bot"></i></span>
+            <div class="min-w-0">
+              <h2 id="chat-title" class="text-sm font-bold text-white">Copiloto IA</h2>
+              <p class="text-[11px] text-slate-400 truncate">Español natural → restricciones X[c,m,p,a,d,b]</p>
+            </div>
+            <span id="ai-mode" class="ml-auto tag tag-obj">NLP local</span>
+          </div>
+          <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3" aria-live="polite"></div>
+          <div id="chat-suggestions" class="px-4 pb-2 flex gap-2 overflow-x-auto"></div>
+          <form id="chat-form" class="p-3 border-t border-white/5 flex gap-2" autocomplete="off">
+            <label for="chat-input" class="sr-only">Instrucción para el copiloto</label>
+            <input id="chat-input" class="field flex-1" placeholder="Ej.: El profesor Carlos Ruiz no puede los viernes…" maxlength="400" />
+            <button id="chat-send" type="submit" class="btn btn-primary !px-3" aria-label="Enviar"><i data-lucide="send-horizontal"></i></button>
+          </form>
+        </section>
+
+        <!-- Pesos -->
+        <section class="glass rounded-2xl p-5" aria-labelledby="weights-title">
+          <div class="flex items-center justify-between">
+            <h2 id="weights-title" class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-4 h-4 text-cyan-300"></i>Función objetivo</h2>
+            <span class="text-[11px] text-slate-500">recalcula en vivo</span>
+          </div>
+          <div class="mt-4 space-y-4" id="weights">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5"><label for="w-gaps" class="text-slate-300">Penalización por horas huecas</label><span class="font-mono text-cyan-300" data-out="gaps">6</span></div>
+              <input id="w-gaps" data-weight="gaps" type="range" min="0" max="10" step="1" class="range" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1.5"><label for="w-fatigue" class="text-slate-300">Fatiga cognitiva consecutiva</label><span class="font-mono text-cyan-300" data-out="fatigue">5</span></div>
+              <input id="w-fatigue" data-weight="fatigue" type="range" min="0" max="10" step="1" class="range" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1.5"><label for="w-morning" class="text-slate-300">Preferencia matutina / franjas</label><span class="font-mono text-cyan-300" data-out="morning">4</span></div>
+              <input id="w-morning" data-weight="morning" type="range" min="0" max="10" step="1" class="range" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1.5"><label for="w-equity" class="text-slate-300">Equidad pedagógica</label><span class="font-mono text-cyan-300" data-out="equity">4</span></div>
+              <input id="w-equity" data-weight="equity" type="range" min="0" max="10" step="1" class="range" />
+            </div>
+          </div>
+          <p class="formal mt-4 !text-[10.5px]">J = 1000·H + w_h·Huecos + w_f·Fatiga + w_m·Franjas + w_e·Equidad</p>
+        </section>
+
+        <!-- Reglas activas -->
+        <section class="glass rounded-2xl p-5" aria-labelledby="rules-title">
+          <div class="flex items-center justify-between">
+            <h2 id="rules-title" class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="list-checks" class="w-4 h-4 text-violet-300"></i>Restricciones del copiloto</h2>
+            <span id="rules-count" class="tag tag-soft">0</span>
+          </div>
+          <ul id="rules-list" class="mt-3 space-y-2"></ul>
+        </section>
+
+        <!-- Log del motor -->
+        <section class="glass rounded-2xl p-5" aria-labelledby="log-title">
+          <h2 id="log-title" class="text-sm font-bold text-white flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4 text-emerald-300"></i>Motor de optimización</h2>
+          <dl id="solver-log" class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs"></dl>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="text-center text-[11px] text-slate-500 py-4">
+      GnoSoft Timetable AI · CSP constructivo + cadenas de Kempe + Simulated Annealing · Google OR-Tools CP-SAT ·
+      <a class="text-cyan-400 hover:underline" href="https://github.com/julianromero171/Hackas" target="_blank" rel="noopener">GitHub</a>
+    </footer>
+  </main>
+
+  <!-- Configuración -->
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <form method="dialog" id="settings-form" class="glass modal-card rounded-2xl p-6 w-[min(600px,94vw)] space-y-5 text-slate-200">
+      <div class="flex items-center justify-between">
+        <h2 id="settings-title" class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="settings-2" class="w-5 h-5 text-cyan-300"></i>Jornada y motor</h2>
+        <button value="cancel" class="btn !h-8 !px-2" aria-label="Cerrar"><i data-lucide="x"></i></button>
+      </div>
+
+      <fieldset>
+        <legend class="text-xs text-slate-400 mb-2">Duración del bloque académico</legend>
+        <div class="flex gap-2">
+          <label class="cursor-pointer"><input type="radio" name="duracion" value="45" class="peer sr-only" /><span class="opt">45 min</span></label>
+          <label class="cursor-pointer"><input type="radio" name="duracion" value="50" class="peer sr-only" /><span class="opt">50 min</span></label>
+          <label class="cursor-pointer"><input type="radio" name="duracion" value="60" class="peer sr-only" /><span class="opt">60 min</span></label>
+        </div>
+      </fieldset>
+
+      <div class="grid grid-cols-2 gap-4">
+        <label class="block"><span class="text-xs text-slate-400">Hora de inicio</span><input id="set-start" type="time" class="field mt-1" /></label>
+        <label class="block"><span class="text-xs text-slate-400">Bloques por día</span><input id="set-blocks" type="text" class="field mt-1 opacity-60" disabled /></label>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <span class="text-xs text-slate-400">Recreo 1</span>
+          <div class="flex gap-2"><select id="set-break1-after" class="field" aria-label="Recreo 1 después del bloque"></select><input id="set-break1-min" type="number" min="5" max="60" class="field w-24" aria-label="Minutos recreo 1" /></div>
+        </div>
+        <div class="space-y-2">
+          <span class="text-xs text-slate-400">Recreo 2 / almuerzo</span>
+          <div class="flex gap-2"><select id="set-break2-after" class="field" aria-label="Recreo 2 después del bloque"></select><input id="set-break2-min" type="number" min="5" max="90" class="field w-24" aria-label="Minutos recreo 2" /></div>
+        </div>
+      </div>
+
+      <fieldset>
+        <legend class="text-xs text-slate-400 mb-2">Motor de optimización</legend>
+        <div class="grid sm:grid-cols-2 gap-2">
+          <label class="cursor-pointer"><input type="radio" name="engine" value="js" class="peer sr-only" /><span class="opt block"><b class="text-white">Híbrido JS</b><br /><span class="text-[11px] text-slate-400">CSP + Kempe + SA · milisegundos</span></span></label>
+          <label class="cursor-pointer" id="engine-cpsat-label"><input type="radio" name="engine" value="cpsat" id="engine-cpsat" class="peer sr-only" /><span class="opt block"><b class="text-white">Google OR-Tools CP-SAT</b><br /><span class="text-[11px] text-slate-400" id="cpsat-note">Requiere backend FastAPI</span></span></label>
+        </div>
+      </fieldset>
+
+      <label class="block">
+        <div class="flex justify-between text-xs mb-1.5"><span class="text-slate-400">Presupuesto de tiempo del motor JS</span><span class="font-mono text-cyan-300" id="set-budget-out">900 ms</span></div>
+        <input id="set-budget" type="range" min="300" max="3000" step="100" class="range" />
+      </label>
+
+      <div class="grid grid-cols-3 gap-3">
+        <label class="block col-span-2"><span class="text-xs text-slate-400">Gemini API key (opcional · modo LLM)</span><input id="set-gemini-key" type="password" class="field mt-1" placeholder="AIza…" autocomplete="off" /></label>
+        <label class="block"><span class="text-xs text-slate-400">Modelo</span><input id="set-gemini-model" type="text" class="field mt-1" /></label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button value="cancel" class="btn">Cancelar</button>
+        <button value="save" id="settings-save" class="btn btn-primary"><i data-lucide="check"></i>Guardar y recalcular</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="modal-root"></div>
+  <div id="toast-root" class="fixed bottom-5 right-5 z-[70] flex flex-col gap-2 items-end"></div>
+  <div id="print-area"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

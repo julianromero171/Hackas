@@ -1,0 +1,127 @@
+{
+  "institucion": "Colegio Demo Gnosoft",
+  "jornada": {
+    "dias": ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+    "bloquesPorDia": 6,
+    "duracionBloque": 50,
+    "horaInicio": "07:00",
+    "recreos": [
+      { "despuesDeBloque": 2, "duracion": 20, "nombre": "Recreo pedagógico" },
+      { "despuesDeBloque": 4, "duracion": 30, "nombre": "Almuerzo" }
+    ]
+  },
+  "tiposEspacio": {
+    "estandar": "Aula estándar",
+    "lab_ciencias": "Laboratorio de Ciencias/Química",
+    "lab_sistemas": "Laboratorio de Sistemas/IA",
+    "polideportivo": "Polideportivo"
+  },
+  "aulas": [
+    { "id": "A101", "nombre": "Aula 101", "tipo": "estandar", "capacidad": 40 },
+    { "id": "A102", "nombre": "Aula 102", "tipo": "estandar", "capacidad": 36 },
+    { "id": "A103", "nombre": "Aula 103", "tipo": "estandar", "capacidad": 38 },
+    { "id": "A104", "nombre": "Aula 104", "tipo": "estandar", "capacidad": 36 },
+    { "id": "A105", "nombre": "Aula 105", "tipo": "estandar", "capacidad": 40 },
+    { "id": "A106", "nombre": "Aula 106", "tipo": "estandar", "capacidad": 38 },
+    { "id": "LABQ", "nombre": "Lab. Ciencias y Química", "tipo": "lab_ciencias", "capacidad": 36 },
+    { "id": "LABB", "nombre": "Lab. Biología (pequeño)", "tipo": "lab_ciencias", "capacidad": 30 },
+    { "id": "LABIA", "nombre": "Lab. Sistemas e IA", "tipo": "lab_sistemas", "capacidad": 36 },
+    { "id": "POLI", "nombre": "Polideportivo", "tipo": "polideportivo", "capacidad": 80 }
+  ],
+  "asignaturas": [
+    { "id": "MAT", "nombre": "Matemáticas", "tipoEspacio": "estandar", "cargaCognitiva": "alta", "color": "#818cf8", "alias": ["matematica", "mate", "algebra", "calculo", "geometria"] },
+    { "id": "ESP", "nombre": "Lengua Castellana", "tipoEspacio": "estandar", "cargaCognitiva": "media", "color": "#f472b6", "alias": ["español", "espanol", "lenguaje", "castellano", "lengua"] },
+    { "id": "ING", "nombre": "Inglés", "tipoEspacio": "estandar", "cargaCognitiva": "media", "color": "#38bdf8", "alias": ["ingles", "english", "idioma extranjero"] },
+    { "id": "BIO", "nombre": "Biología", "tipoEspacio": "estandar", "cargaCognitiva": "media", "color": "#4ade80", "alias": ["ciencias naturales", "naturales"] },
+    { "id": "FIS", "nombre": "Física", "tipoEspacio": "estandar", "cargaCognitiva": "alta", "color": "#fb923c", "alias": [] },
+    { "id": "QUI", "nombre": "Química", "tipoEspacio": "lab_ciencias", "cargaCognitiva": "alta", "color": "#facc15", "alias": [] },
+    { "id": "SOC", "nombre": "Ciencias Sociales", "tipoEspacio": "estandar", "cargaCognitiva": "baja", "color": "#a78bfa", "alias": ["sociales", "historia", "geografia"] },
+    { "id": "TEC", "nombre": "Tecnología e IA", "tipoEspacio": "lab_sistemas", "cargaCognitiva": "media", "color": "#22d3ee", "alias": ["tecnologia", "informatica", "sistemas", "inteligencia artificial", "programacion"] },
+    { "id": "EDF", "nombre": "Educación Física", "tipoEspacio": "polideportivo", "cargaCognitiva": "baja", "color": "#34d399", "alias": ["ed fisica", "deporte", "deportes", "edufisica"] },
+    { "id": "ART", "nombre": "Artes", "tipoEspacio": "estandar", "cargaCognitiva": "baja", "color": "#f87171", "alias": ["arte", "artistica", "educacion artistica"] },
+    { "id": "ETI", "nombre": "Ética y Valores", "tipoEspacio": "estandar", "cargaCognitiva": "baja", "color": "#94a3b8", "alias": ["etica", "valores", "religion"] }
+  ],
+  "docentes": [
+    { "id": "P01", "nombre": "Carlos Ruiz", "asignaturas": ["MAT"], "maxHorasSemana": 22, "noDisponible": [] },
+    { "id": "P02", "nombre": "Ana Torres", "asignaturas": ["MAT"], "maxHorasSemana": 22, "noDisponible": [] },
+    { "id": "P03", "nombre": "Laura Méndez", "asignaturas": ["ESP"], "maxHorasSemana": 20, "noDisponible": [] },
+    { "id": "P04", "nombre": "Pedro Gómez", "asignaturas": ["ESP"], "maxHorasSemana": 20, "noDisponible": [] },
+    { "id": "P05", "nombre": "Sofía Herrera", "asignaturas": ["ING"], "maxHorasSemana": 22, "noDisponible": [] },
+    { "id": "P06", "nombre": "Diana Castro", "asignaturas": ["BIO"], "maxHorasSemana": 16, "noDisponible": [] },
+    { "id": "P07", "nombre": "Julián Ríos", "asignaturas": ["FIS"], "maxHorasSemana": 16, "noDisponible": [] },
+    { "id": "P08", "nombre": "Marta Vargas", "asignaturas": ["QUI"], "maxHorasSemana": 16, "noDisponible": [{ "dia": "Jueves", "bloques": [4, 5, 6], "motivo": "Coordinación de laboratorio" }] },
+    { "id": "P09", "nombre": "Andrés Rojas", "asignaturas": ["SOC"], "maxHorasSemana": 20, "noDisponible": [] },
+    { "id": "P10", "nombre": "Felipe Ortiz", "asignaturas": ["TEC"], "maxHorasSemana": 22, "noDisponible": [] },
+    { "id": "P11", "nombre": "Jorge Peña", "asignaturas": ["EDF"], "maxHorasSemana": 16, "noDisponible": [{ "dia": "Viernes", "bloques": [5, 6], "motivo": "Entrenamiento selección deportiva" }] },
+    { "id": "P12", "nombre": "Valentina Cruz", "asignaturas": ["ART"], "maxHorasSemana": 16, "noDisponible": [{ "dia": "Lunes", "bloques": [1, 2, 3, 4, 5, 6], "motivo": "Labora en otra sede" }] },
+    { "id": "P13", "nombre": "Ricardo Mora", "asignaturas": ["ETI"], "maxHorasSemana": 16, "noDisponible": [{ "dia": "Martes", "bloques": [1, 2], "motivo": "Comité de convivencia" }] }
+  ],
+  "cursos": [
+    {
+      "id": "6A", "nombre": "6°A", "grado": 6, "estudiantes": 32, "aulaBase": "A101",
+      "plan": [
+        { "asignatura": "MAT", "horas": 5, "docente": "P01" }, { "asignatura": "ESP", "horas": 4, "docente": "P03" },
+        { "asignatura": "ING", "horas": 3, "docente": "P05" }, { "asignatura": "BIO", "horas": 2, "docente": "P06" },
+        { "asignatura": "FIS", "horas": 2, "docente": "P07" }, { "asignatura": "QUI", "horas": 2, "docente": "P08" },
+        { "asignatura": "SOC", "horas": 3, "docente": "P09" }, { "asignatura": "TEC", "horas": 3, "docente": "P10" },
+        { "asignatura": "EDF", "horas": 2, "docente": "P11" }, { "asignatura": "ART", "horas": 2, "docente": "P12" },
+        { "asignatura": "ETI", "horas": 2, "docente": "P13" }
+      ]
+    },
+    {
+      "id": "6B", "nombre": "6°B", "grado": 6, "estudiantes": 30, "aulaBase": "A102",
+      "plan": [
+        { "asignatura": "MAT", "horas": 5, "docente": "P01" }, { "asignatura": "ESP", "horas": 4, "docente": "P03" },
+        { "asignatura": "ING", "horas": 3, "docente": "P05" }, { "asignatura": "BIO", "horas": 2, "docente": "P06" },
+        { "asignatura": "FIS", "horas": 2, "docente": "P07" }, { "asignatura": "QUI", "horas": 2, "docente": "P08" },
+        { "asignatura": "SOC", "horas": 3, "docente": "P09" }, { "asignatura": "TEC", "horas": 3, "docente": "P10" },
+        { "asignatura": "EDF", "horas": 2, "docente": "P11" }, { "asignatura": "ART", "horas": 2, "docente": "P12" },
+        { "asignatura": "ETI", "horas": 2, "docente": "P13" }
+      ]
+    },
+    {
+      "id": "7A", "nombre": "7°A", "grado": 7, "estudiantes": 34, "aulaBase": "A103",
+      "plan": [
+        { "asignatura": "MAT", "horas": 5, "docente": "P01" }, { "asignatura": "ESP", "horas": 4, "docente": "P03" },
+        { "asignatura": "ING", "horas": 3, "docente": "P05" }, { "asignatura": "BIO", "horas": 2, "docente": "P06" },
+        { "asignatura": "FIS", "horas": 2, "docente": "P07" }, { "asignatura": "QUI", "horas": 2, "docente": "P08" },
+        { "asignatura": "SOC", "horas": 3, "docente": "P09" }, { "asignatura": "TEC", "horas": 3, "docente": "P10" },
+        { "asignatura": "EDF", "horas": 2, "docente": "P11" }, { "asignatura": "ART", "horas": 2, "docente": "P12" },
+        { "asignatura": "ETI", "horas": 2, "docente": "P13" }
+      ]
+    },
+    {
+      "id": "7B", "nombre": "7°B", "grado": 7, "estudiantes": 31, "aulaBase": "A104",
+      "plan": [
+        { "asignatura": "MAT", "horas": 5, "docente": "P02" }, { "asignatura": "ESP", "horas": 4, "docente": "P04" },
+        { "asignatura": "ING", "horas": 3, "docente": "P05" }, { "asignatura": "BIO", "horas": 2, "docente": "P06" },
+        { "asignatura": "FIS", "horas": 2, "docente": "P07" }, { "asignatura": "QUI", "horas": 2, "docente": "P08" },
+        { "asignatura": "SOC", "horas": 3, "docente": "P09" }, { "asignatura": "TEC", "horas": 3, "docente": "P10" },
+        { "asignatura": "EDF", "horas": 2, "docente": "P11" }, { "asignatura": "ART", "horas": 2, "docente": "P12" },
+        { "asignatura": "ETI", "horas": 2, "docente": "P13" }
+      ]
+    },
+    {
+      "id": "8A", "nombre": "8°A", "grado": 8, "estudiantes": 35, "aulaBase": "A105",
+      "plan": [
+        { "asignatura": "MAT", "horas": 5, "docente": "P02" }, { "asignatura": "ESP", "horas": 4, "docente": "P04" },
+        { "asignatura": "ING", "horas": 3, "docente": "P05" }, { "asignatura": "BIO", "horas": 2, "docente": "P06" },
+        { "asignatura": "FIS", "horas": 2, "docente": "P07" }, { "asignatura": "QUI", "horas": 2, "docente": "P08" },
+        { "asignatura": "SOC", "horas": 3, "docente": "P09" }, { "asignatura": "TEC", "horas": 3, "docente": "P10" },
+        { "asignatura": "EDF", "horas": 2, "docente": "P11" }, { "asignatura": "ART", "horas": 2, "docente": "P12" },
+        { "asignatura": "ETI", "horas": 2, "docente": "P13" }
+      ]
+    },
+    {
+      "id": "8B", "nombre": "8°B", "grado": 8, "estudiantes": 33, "aulaBase": "A106",
+      "plan": [
+        { "asignatura": "MAT", "horas": 5, "docente": "P02" }, { "asignatura": "ESP", "horas": 4, "docente": "P04" },
+        { "asignatura": "ING", "horas": 3, "docente": "P05" }, { "asignatura": "BIO", "horas": 2, "docente": "P06" },
+        { "asignatura": "FIS", "horas": 2, "docente": "P07" }, { "asignatura": "QUI", "horas": 2, "docente": "P08" },
+        { "asignatura": "SOC", "horas": 3, "docente": "P09" }, { "asignatura": "TEC", "horas": 3, "docente": "P10" },
+        { "asignatura": "EDF", "horas": 2, "docente": "P11" }, { "asignatura": "ART", "horas": 2, "docente": "P12" },
+        { "asignatura": "ETI", "horas": 2, "docente": "P13" }
+      ]
+    }
+  ]
+}
