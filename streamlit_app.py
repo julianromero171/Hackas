@@ -52,29 +52,29 @@ def inyectar_estilos() -> None:
         <style>
         .block-container { padding-top: 1.2rem; padding-bottom: 2rem; }
         .kpi-card {
-            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
-            border: 1px solid #334155;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 14px 16px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
         }
         .kpi-label {
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: #94a3b8;
+            color: #64748b;
             margin-bottom: 4px;
             font-weight: 600;
         }
         .kpi-value {
             font-size: 1.7rem;
             font-weight: 800;
-            color: #f8fafc;
+            color: #0f172a;
             line-height: 1.15;
         }
         .kpi-sub {
             font-size: 0.78rem;
-            color: #cbd5e1;
+            color: #64748b;
             margin-top: 4px;
         }
         .tt-table {
@@ -84,20 +84,20 @@ def inyectar_estilos() -> None:
             font-size: 0.84rem;
         }
         .tt-table th {
-            background: #1e293b;
-            color: #e2e8f0;
+            background: #f1f5f9;
+            color: #1e293b;
             padding: 10px 8px;
             text-align: center;
             border-radius: 8px;
             font-weight: 700;
-            border: 1px solid #334155;
+            border: 1px solid #cbd5e1;
         }
         .tt-block-col {
-            background: #0f172a;
-            color: #cbd5e1;
+            background: #f8fafc;
+            color: #334155;
             padding: 8px 10px;
             border-radius: 8px;
-            border: 1px solid #334155;
+            border: 1px solid #e2e8f0;
             text-align: center;
             width: 125px;
             font-weight: 600;
@@ -107,7 +107,7 @@ def inyectar_estilos() -> None:
             padding: 8px 10px;
             vertical-align: top;
             min-height: 68px;
-            border: 1px solid rgba(255,255,255,0.12);
+            border: 1px solid #cbd5e1;
         }
         .tt-asig { font-weight: 700; font-size: 0.88rem; margin-bottom: 3px; }
         .tt-meta { font-size: 0.76rem; opacity: 0.92; }
@@ -220,7 +220,7 @@ def renderizar_matriz_curso_html(
             fila = por_slot.get((dia, blq.id))
             if fila is None:
                 html.append(
-                    '<td class="tt-cell" style="background:#0f172a;color:#64748b;text-align:center;">'
+                    '<td class="tt-cell" style="background:#f8fafc;color:#64748b;text-align:center;border:1px dashed #cbd5e1;">'
                     '<i>Sin asignar</i></td>'
                 )
                 continue
@@ -308,7 +308,7 @@ def renderizar_matriz_docente_html(
                 )
             else:
                 html.append(
-                    '<td class="tt-cell" style="background:#0f172a;color:#64748b;text-align:center;">'
+                    '<td class="tt-cell" style="background:#f8fafc;color:#64748b;text-align:center;border:1px dashed #e2e8f0;">'
                     '<div style="margin-top:10px;">🟢 Libre</div></td>'
                 )
         html.append("</tr>")

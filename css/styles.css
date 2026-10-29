@@ -176,3 +176,227 @@ dialog::backdrop { background: rgba(2,6,23,.72); backdrop-filter: blur(6px); }
   .print-table td.pc { border-left: 4px solid var(--sc, #999); }
   .print-break td { background: #f4f4f5; text-align: center; font-style: italic; color: #555; }
 }
+
+/* ==========================================================================
+   TEMA BLANCO (LIGHT MODE)
+   ========================================================================== */
+html.light, :root {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+}
+
+html.light body {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+html.light .bg-ink-950 {
+  background-color: #ffffff !important;
+}
+
+html.light header {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.light .border-white\/5,
+html.light .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .bg-white\/5,
+html.light .bg-white\/10 {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .glass {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(0,0,0,.06), 0 2px 6px -1px rgba(0,0,0,.04) !important;
+}
+
+html.light .btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+html.light .btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+html.light .btn-primary {
+  background: linear-gradient(135deg, #0284c7, #6366f1) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+html.light .field {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light .field:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+html.light select.field option {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light .bubble-bot {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light .formal {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0369a1 !important;
+}
+
+html.light .stat {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .seg {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .seg-btn {
+  color: #64748b !important;
+}
+
+html.light .seg-btn:hover {
+  color: #0f172a !important;
+}
+
+html.light .seg-btn.is-active {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1) !important;
+}
+
+html.light .chip {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html.light .chip:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.light .chip.is-active {
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
+  color: #0369a1 !important;
+}
+
+html.light .kpi-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .kpi-label {
+  color: #64748b !important;
+}
+
+html.light .kpi-value {
+  color: #0f172a !important;
+}
+
+html.light .kpi-sub {
+  color: #64748b !important;
+}
+
+html.light .tt-cell {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sc) 15%, #ffffff), color-mix(in srgb, var(--sc) 5%, #ffffff)) !important;
+  border: 1px solid color-mix(in srgb, var(--sc) 35%, #cbd5e1) !important;
+}
+
+html.light .tt-subject {
+  color: #0f172a !important;
+}
+
+html.light .tt-meta {
+  color: #475569 !important;
+}
+
+html.light .tt-room {
+  color: #64748b !important;
+}
+
+html.light .tt-th {
+  color: #334155 !important;
+}
+
+html.light .tt-empty,
+html.light .tt-free {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+html.light .bg-grid {
+  background-image: linear-gradient(rgba(100,116,139,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(100,116,139,.08) 1px, transparent 1px) !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+
+html.light .bg-aurora .orb {
+  opacity: 0.12 !important;
+}
+
+html.light .opt {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html.light .peer:checked + .opt {
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
+}
+
+html.light .modal-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.2) !important;
+  color: #1e293b !important;
+}
+
