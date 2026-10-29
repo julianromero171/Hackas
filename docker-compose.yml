@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    container_name: gnosoft_timetable_ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # FastAPI backend + Frontend SPA
+      - "8501:8501"  # Dashboard Streamlit
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
