@@ -1,25 +1,29 @@
 """
 Capa de carga y preparación de datos (Excel → estructuras limpias para OR-Tools).
 
-Hojas esperadas en el libro Excel:
+Hojas soportadas en el libro Excel de la Hackathon Gnosoft:
+    Leeme           : Concepto, Descripción                          (opcional)
     Bloques         : bloque_id, inicio, fin
     Cursos          : curso_id, nombre, estudiantes
     Docentes        : docente_id, nombre, max_sesiones_semana
+    Habilitados     : asignatura, docente_id, habilitado             (opcional)
     Carga           : curso_id, asignatura, docente_principal_id, sesiones_semana, tipo_salon_requerido
     Salones         : salon_id, nombre, tipo, capacidad
     Disponibilidad  : docente_id, dia, bloque_id, disponible
     Cambio          : docente_id, dia, bloque_id, disponible_nuevo, motivo   (opcional)
 
 Uso típico:
-    loader = DataLoader("datos.xlsx")
-    loader.cargar()                      # lee y normaliza
-    reporte = loader.validar()           # errores / advertencias
-    datos = loader.preparar_para_solver(aplicar_cambio=True)
+    loader = DataLoader("data/hackathon_gnosoft.xlsx")
+    loader.cargar()
+    reporte = loader.validar()
+    datos_base = loader.preparar_para_solver(aplicar_cambio=False)
+    datos_cambio = loader.preparar_para_solver(aplicar_cambio=True)
 """
 from __future__ import annotations
 
 import datetime as dt
 import logging
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,21 +37,24 @@ logger = logging.getLogger(__name__)
 # Constantes de esquema
 # --------------------------------------------------------------------------- #
 ESQUEMA: Final[dict[str, list[str]]] = {
+    "Leeme": ["concepto", "descripcion"],
     "Bloques": ["bloque_id", "inicio", "fin"],
     "Cursos": ["curso_id", "nombre", "estudiantes"],
     "Docentes": ["docente_id", "nombre", "max_sesiones_semana"],
+    "Habilitados": ["asignatura", "docente_id", "habilitado"],
     "Carga": ["curso_id", "asignatura", "docente_principal_id", "sesiones_semana", "tipo_salon_requerido"],
     "Salones": ["salon_id", "nombre", "tipo", "capacidad"],
     "Disponibilidad": ["docente_id", "dia", "bloque_id", "disponible"],
     "Cambio": ["docente_id", "dia", "bloque_id", "disponible_nuevo", "motivo"],
 }
-HOJAS_OPCIONALES: Final[frozenset[str]] = frozenset({"Cambio"})
+HOJAS_OPCIONALES: Final[frozenset[str]] = frozenset({"Leeme", "Habilitados", "Cambio"})
 
 # Columnas de identificadores por hoja (se normalizan a str y no admiten nulos).
 COLUMNAS_ID: Final[dict[str, list[str]]] = {
     "Bloques": ["bloque_id"],
     "Cursos": ["curso_id"],
     "Docentes": ["docente_id"],
+    "Habilitados": ["docente_id"],
     "Carga": ["curso_id", "docente_principal_id"],
     "Salones": ["salon_id"],
     "Disponibilidad": ["docente_id", "bloque_id"],
@@ -130,18 +137,18 @@ class Requerimiento:
     id: int
     curso_id: str
     asignatura: str
-    docente_id: str
+    docente_id: str  # docente_principal_id
     sesiones_semana: int
     tipo_salon: str
+    docentes_habilitados: tuple[str, ...] = ()
 
 
 @dataclass
 class SolverData:
     """
-    Estructuras limpias, indexadas y listas para un modelo CP-SAT.
+    Estructuras limpias, indexadas y listas para un modelo CP-SAT (ScheduleSolver).
 
-    Variable sugerida:  x[r, d, b, s] ∈ {0,1}
-        r ∈ requerimientos, (d, b) ∈ slots, s ∈ salones_compatibles[r]
+    Variable de decisión:  X[c, a, d, s, dia, b] ∈ {0, 1}
     """
 
     dias: list[str]
@@ -154,9 +161,15 @@ class SolverData:
     disponibilidad: dict[ClaveDisp, bool]
     # requerimiento.id -> salones válidos (tipo correcto y capacidad suficiente)
     salones_compatibles: dict[int, list[str]]
+    # requerimiento.id -> docentes válidos (principal + alternativos habilitados)
+    docentes_compatibles: dict[int, list[str]]
+    # asignatura (normalizada) -> lista de docente_id habilitados
+    habilitados_por_asignatura: dict[str, list[str]]
     # Índices enteros (útiles para arrays / nombres compactos de variables)
     idx_dia: dict[str, int]
     idx_bloque: dict[str, int]
+    # Metadatos opcionales (hoja Léeme)
+    metadatos: dict[str, str] = field(default_factory=dict)
     # Bitácora de cambios de disponibilidad aplicados
     cambios_aplicados: list[dict[str, Any]] = field(default_factory=list)
 
@@ -178,6 +191,7 @@ class SolverData:
         return out
 
     def requerimientos_por_docente(self) -> dict[str, list[Requerimiento]]:
+        """Requerimientos donde el docente es el principal."""
         out: dict[str, list[Requerimiento]] = {d: [] for d in self.docentes}
         for r in self.requerimientos:
             out[r.docente_id].append(r)
@@ -217,6 +231,20 @@ def normalizar_id(valor: Any) -> Optional[str]:
         valor = int(valor)
     texto = str(valor).strip()
     return texto or None
+
+
+def _clave_id_canonica(valor: Any) -> Optional[str]:
+    """
+    Clave canónica para reconciliar 'D02' con 'D2' o 'B01' con 'B1'.
+    Quita ceros a la izquierda en la parte numérica: 'D02' -> 'D2'.
+    """
+    if _es_nulo(valor) or not str(valor).strip():
+        return None
+    texto = str(valor).strip()
+    m = re.fullmatch(r"([A-Za-z]+?)0*(\d+)", texto)
+    if m:
+        return f"{m.group(1).upper()}{int(m.group(2))}"
+    return texto.upper()
 
 
 def normalizar_bool(valor: Any) -> Optional[bool]:
@@ -288,13 +316,22 @@ class DataLoader:
         por_clave = {_sin_tildes(str(n)).strip().lower(): df for n, df in libro.items()}
         self.hojas = {}
         for hoja, columnas in ESQUEMA.items():
-            df = por_clave.get(_sin_tildes(hoja).lower())
+            clave = _sin_tildes(hoja).lower()
+            df = por_clave.get(clave)
+            if df is None and hoja == "Habilitados":
+                # Alias comunes para la tabla de docentes habilitados por asignatura
+                for alias in ("habilitacion", "docentes_asignaturas", "asignaturas_docentes", "asignaturas"):
+                    if alias in por_clave:
+                        df = por_clave[alias]
+                        break
             if df is None:
                 if hoja in HOJAS_OPCIONALES:
                     df = pd.DataFrame(columns=columnas)
                 else:
                     raise DataValidationError([f"Falta la hoja obligatoria '{hoja}'."])
             self.hojas[hoja] = self._normalizar_hoja(hoja, df.copy())
+
+        self._reconciliar_ids_docentes_y_bloques()
         return self.hojas
 
     @staticmethod
@@ -310,15 +347,47 @@ class DataLoader:
             if "dia_original" not in df.columns:
                 df["dia_original"] = df["dia"]
             df["dia"] = df["dia"].map(normalizar_dia)
-        for col in ("disponible", "disponible_nuevo"):
+        for col in ("disponible", "disponible_nuevo", "habilitado"):
             if col in df.columns:
                 if f"{col}_original" not in df.columns:
                     df[f"{col}_original"] = df[col]
                 df[col] = df[col].map(normalizar_bool)
-        for col in ("nombre", "asignatura", "tipo", "tipo_salon_requerido", "motivo"):
+        for col in ("nombre", "asignatura", "tipo", "tipo_salon_requerido", "motivo", "concepto", "descripcion"):
             if col in df.columns:
                 df[col] = df[col].map(lambda v: None if _es_nulo(v) else str(v).strip())
         return df
+
+    def _reconciliar_ids_docentes_y_bloques(self) -> None:
+        """
+        Reconcilia automáticamente variantes como 'D02' vs 'D2' o 'B01' vs 'B1'
+        usando como referencia las claves primarias de las hojas 'Docentes' y 'Bloques'.
+        """
+        if "Docentes" in self.hojas and "docente_id" in self.hojas["Docentes"].columns:
+            mapa_doc = {
+                _clave_id_canonica(d): d
+                for d in self.hojas["Docentes"]["docente_id"].dropna().unique()
+            }
+            for hoja, col in (
+                ("Carga", "docente_principal_id"),
+                ("Habilitados", "docente_id"),
+                ("Disponibilidad", "docente_id"),
+                ("Cambio", "docente_id"),
+            ):
+                if hoja in self.hojas and col in self.hojas[hoja].columns:
+                    self.hojas[hoja][col] = self.hojas[hoja][col].map(
+                        lambda v: mapa_doc.get(_clave_id_canonica(v), v) if v is not None else None
+                    )
+
+        if "Bloques" in self.hojas and "bloque_id" in self.hojas["Bloques"].columns:
+            mapa_blq = {
+                _clave_id_canonica(b): b
+                for b in self.hojas["Bloques"]["bloque_id"].dropna().unique()
+            }
+            for hoja in ("Disponibilidad", "Cambio"):
+                if hoja in self.hojas and "bloque_id" in self.hojas[hoja].columns:
+                    self.hojas[hoja]["bloque_id"] = self.hojas[hoja]["bloque_id"].map(
+                        lambda v: mapa_blq.get(_clave_id_canonica(v), v) if v is not None else None
+                    )
 
     # -------------------------------------------------------------- validación
     def validar(self, *, lanzar: bool = False) -> ReporteValidacion:
@@ -349,6 +418,8 @@ class DataLoader:
     def _validar_columnas(self, rep: ReporteValidacion) -> bool:
         ok = True
         for hoja, columnas in ESQUEMA.items():
+            if hoja in HOJAS_OPCIONALES and self.hojas[hoja].empty:
+                continue
             faltantes = [c for c in columnas if c not in self.hojas[hoja].columns]
             if hoja == "Cambio" and "motivo" in faltantes:  # 'motivo' es informativo
                 self.hojas[hoja]["motivo"] = None
@@ -361,6 +432,8 @@ class DataLoader:
     def _validar_ids(self, rep: ReporteValidacion) -> None:
         for hoja, columnas in COLUMNAS_ID.items():
             df = self.hojas[hoja]
+            if hoja in HOJAS_OPCIONALES and df.empty:
+                continue
             for col in columnas:
                 nulos = df.index[df[col].isna()].tolist()
                 if nulos:
@@ -418,6 +491,8 @@ class DataLoader:
         # Días y booleanos
         for hoja, col_bool in (("Disponibilidad", "disponible"), ("Cambio", "disponible_nuevo")):
             df = self.hojas[hoja]
+            if hoja in HOJAS_OPCIONALES and df.empty:
+                continue
             dias_malos = df.index[df["dia"].isna()].tolist()
             if dias_malos:
                 valores = sorted({str(v) for v in df.loc[dias_malos, "dia_original"]})
@@ -435,7 +510,10 @@ class DataLoader:
         tipos = {t.lower() for t in self.hojas["Salones"]["tipo"].dropna()}
 
         def revisar(hoja: str, col: str, universo: set[str], destino: str, minus: bool = False) -> None:
-            serie = self.hojas[hoja][col].dropna()
+            df = self.hojas[hoja]
+            if hoja in HOJAS_OPCIONALES and df.empty:
+                return
+            serie = df[col].dropna()
             faltan = sorted({v for v in serie if (v.lower() if minus else v) not in universo})
             if faltan:
                 rep.errores.append(f"[{hoja}] '{col}' sin correspondencia en {destino}: {', '.join(faltan)}")
@@ -443,6 +521,7 @@ class DataLoader:
         revisar("Carga", "curso_id", cursos, "Cursos")
         revisar("Carga", "docente_principal_id", docentes, "Docentes")
         revisar("Carga", "tipo_salon_requerido", tipos, "Salones.tipo", minus=True)
+        revisar("Habilitados", "docente_id", docentes, "Docentes")
         for hoja in ("Disponibilidad", "Cambio"):
             revisar(hoja, "docente_id", docentes, "Docentes")
             revisar(hoja, "bloque_id", bloques, "Bloques")
@@ -485,6 +564,19 @@ class DataLoader:
                 rep.errores.append(
                     f"[Salones] tipo '{tipo}': se requieren {horas} sesiones y solo hay {oferta[tipo]} slots")
 
+    def _mapa_habilitados(self) -> dict[str, list[str]]:
+        """Devuelve asignatura_normalizada -> lista de docente_id habilitados."""
+        out: dict[str, list[str]] = {}
+        df_hab = self.hojas.get("Habilitados")
+        if df_hab is not None and not df_hab.empty:
+            for _, fila in df_hab.iterrows():
+                if fila.get("habilitado") is True and fila.get("asignatura") and fila.get("docente_id"):
+                    clave = _sin_tildes(str(fila["asignatura"])).strip().lower()
+                    lista = out.setdefault(clave, [])
+                    if fila["docente_id"] not in lista:
+                        lista.append(fila["docente_id"])
+        return out
+
     def _validar_factibilidad(self, rep: ReporteValidacion) -> None:
         """Condiciones necesarias de factibilidad (no suficientes) antes de llamar al solver."""
         carga = self.hojas["Carga"]
@@ -497,16 +589,40 @@ class DataLoader:
         docentes = self.hojas["Docentes"].dropna(subset=["docente_id"]).set_index("docente_id")
         disp = self._disponibilidad_efectiva()
         libres = disp[disp["disponible"]].groupby("docente_id").size()
-        for doc, total in carga.groupby("docente_principal_id")["sesiones_semana"].sum().items():
+        hab_map = self._mapa_habilitados()
+
+        for doc, sub_df in carga.groupby("docente_principal_id"):
             if doc not in docentes.index:
                 continue
+            total = int(sub_df["sesiones_semana"].sum())
             maximo = int(docentes.at[doc, "max_sesiones_semana"])
-            if total > maximo:
-                rep.errores.append(f"[Docentes] {doc}: carga {total} > máximo semanal {maximo}")
             n_libres = int(libres.get(doc, 0))
+
+            # Verificar si alguna asignatura de este docente tiene docentes alternativos habilitados
+            alternativos: set[str] = set()
+            for asig in sub_df["asignatura"].dropna().unique():
+                clave = _sin_tildes(str(asig)).strip().lower()
+                for alt in hab_map.get(clave, []):
+                    if alt != doc and alt in docentes.index:
+                        alternativos.add(alt)
+
+            if total > maximo:
+                if alternativos:
+                    rep.advertencias.append(
+                        f"[Docentes] {doc}: carga principal {total} > máximo semanal {maximo}; "
+                        f"requiere apoyo de docente(s) habilitado(s): {', '.join(sorted(alternativos))}"
+                    )
+                else:
+                    rep.errores.append(f"[Docentes] {doc}: carga {total} > máximo semanal {maximo}")
             if not self.disponible_por_defecto and total > n_libres:
-                rep.errores.append(
-                    f"[Disponibilidad] {doc}: carga {total} > bloques disponibles {n_libres} (tras aplicar Cambio)")
+                if alternativos:
+                    rep.advertencias.append(
+                        f"[Disponibilidad] {doc}: carga principal {total} > bloques disponibles {n_libres}; "
+                        f"requiere apoyo de {', '.join(sorted(alternativos))}"
+                    )
+                else:
+                    rep.errores.append(
+                        f"[Disponibilidad] {doc}: carga {total} > bloques disponibles {n_libres} (tras aplicar Cambio)")
 
     # ------------------------------------------------- cambio de disponibilidad
     def aplicar_cambio_disponibilidad(self, df_disponibilidad: pd.DataFrame,
@@ -514,7 +630,7 @@ class DataLoader:
         """
         Aplica la hoja Cambio sobre Disponibilidad y devuelve un DataFrame NUEVO (no muta la entrada).
 
-        - Empareja por (docente_id, dia, bloque_id) con días/IDs normalizados ('martes' == 'Martes').
+        - Empareja por (docente_id, dia, bloque_id) con días/IDs normalizados ('martes' == 'Martes', 'D02' == 'D2').
         - Si la combinación existe → sobrescribe `disponible` con `disponible_nuevo`.
         - Si no existe → la agrega como fila nueva (cambio sobre una rejilla dispersa).
         - Agrega columnas de trazabilidad: `modificado` (bool) y `motivo_cambio`.
@@ -528,6 +644,14 @@ class DataLoader:
         cambio = self._normalizar_hoja("Cambio", df_cambio.copy())
         if "motivo" not in cambio.columns:
             cambio["motivo"] = None
+
+        # Reconciliar IDs tipo 'D02' -> 'D2' respecto a los IDs presentes en disp (o Docentes)
+        universo_doc = set(disp["docente_id"].dropna().unique())
+        if "Docentes" in self.hojas and "docente_id" in self.hojas["Docentes"].columns:
+            universo_doc |= set(self.hojas["Docentes"]["docente_id"].dropna().unique())
+        mapa_doc = {_clave_id_canonica(d): d for d in universo_doc}
+        disp["docente_id"] = disp["docente_id"].map(lambda v: mapa_doc.get(_clave_id_canonica(v), v))
+        cambio["docente_id"] = cambio["docente_id"].map(lambda v: mapa_doc.get(_clave_id_canonica(v), v))
 
         disp = disp.dropna(subset=claves).drop_duplicates(claves, keep="last")
         if "modificado" not in disp.columns:
@@ -586,14 +710,30 @@ class DataLoader:
         salones = {r.salon_id: Salon(r.salon_id, r.nombre or r.salon_id, r.tipo, int(r.capacidad))
                    for r in h["Salones"].itertuples()}
 
-        requerimientos = [
-            Requerimiento(i, r.curso_id, r.asignatura, r.docente_principal_id,
-                          int(r.sesiones_semana), r.tipo_salon_requerido)
-            for i, r in enumerate(h["Carga"].itertuples())
-        ]
+        hab_map = self._mapa_habilitados()
+        requerimientos: list[Requerimiento] = []
+        docentes_compatibles: dict[int, list[str]] = {}
+        for i, r in enumerate(h["Carga"].itertuples()):
+            clave_asig = _sin_tildes(str(r.asignatura)).strip().lower()
+            cands = [r.docente_principal_id]
+            for alt in hab_map.get(clave_asig, []):
+                if alt in docentes and alt not in cands:
+                    cands.append(alt)
+            req = Requerimiento(
+                id=i,
+                curso_id=r.curso_id,
+                asignatura=r.asignatura,
+                docente_id=r.docente_principal_id,
+                sesiones_semana=int(r.sesiones_semana),
+                tipo_salon=r.tipo_salon_requerido,
+                docentes_habilitados=tuple(cands),
+            )
+            requerimientos.append(req)
+            docentes_compatibles[i] = cands
+
         # Salones válidos ordenados por capacidad (best-fit primero).
         compatibles = {
-            req.id: [s.id for s in sorted(salones.values(), key=lambda s: s.capacidad)
+            req.id: [s.id for s in sorted(salones.values(), key=lambda s: (s.capacidad, s.id))
                      if s.tipo.lower() == req.tipo_salon.lower()
                      and s.capacidad >= cursos[req.curso_id].estudiantes]
             for req in requerimientos
@@ -607,10 +747,26 @@ class DataLoader:
             for d in docentes for dia in dias for b in bloques
         }
 
+        metadatos: dict[str, str] = {}
+        if "Leeme" in h and not h["Leeme"].empty:
+            for r in h["Leeme"].itertuples():
+                if getattr(r, "concepto", None) and getattr(r, "descripcion", None):
+                    metadatos[str(r.concepto)] = str(r.descripcion)
+
         return SolverData(
-            dias=dias, bloques=bloques, cursos=cursos, docentes=docentes, salones=salones,
-            requerimientos=requerimientos, disponibilidad=disponibilidad, salones_compatibles=compatibles,
-            idx_dia={d: i for i, d in enumerate(dias)}, idx_bloque={b.id: b.indice for b in bloques},
+            dias=dias,
+            bloques=bloques,
+            cursos=cursos,
+            docentes=docentes,
+            salones=salones,
+            requerimientos=requerimientos,
+            disponibilidad=disponibilidad,
+            salones_compatibles=compatibles,
+            docentes_compatibles=docentes_compatibles,
+            habilitados_por_asignatura=hab_map,
+            idx_dia={d: i for i, d in enumerate(dias)},
+            idx_bloque={b.id: b.indice for b in bloques},
+            metadatos=metadatos,
             cambios_aplicados=list(self.cambios_aplicados) if aplicar_cambio else [],
         )
 
@@ -640,24 +796,3 @@ class DataLoader:
         """Índices pandas → número de fila Excel (encabezado = fila 1)."""
         filas = [str(int(i) + 2) for i in indices]
         return ", ".join(filas[:maximo]) + (f" … (+{len(filas) - maximo})" if len(filas) > maximo else "")
-
-
-# --------------------------------------------------------------------------- #
-# CLI rápido:  python -m backend.data_loader datos.xlsx
-# --------------------------------------------------------------------------- #
-if __name__ == "__main__":
-    import sys
-
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    if len(sys.argv) < 2:
-        sys.exit("Uso: python -m backend.data_loader <archivo.xlsx>")
-    cargador = DataLoader(sys.argv[1])
-    cargador.cargar()
-    print(cargador.validar())
-    if cargador.reporte.ok:
-        datos = cargador.preparar_para_solver()
-        print(f"\n{len(datos.cursos)} cursos · {len(datos.docentes)} docentes · {len(datos.salones)} salones · "
-              f"{len(datos.requerimientos)} requerimientos · {len(datos.slots)} slots")
-        for c in datos.cambios_aplicados:
-            print(f"  Cambio {c['docente_id']} {c['dia']} {c['bloque_id']}: {c['antes']} → {c['despues']} "
-                  f"[{c['tipo']}] {c['motivo'] or ''}")
